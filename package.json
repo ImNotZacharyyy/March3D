@@ -1,6 +1,6 @@
 {
   "name": "March3D",
-  "version": "0.3.3",
+  "version": "0.3.35",
   "author": "Connor Pali",
   "private": true,
   "description": "3D viewer for OpenMarch .dots drill files",

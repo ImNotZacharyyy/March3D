@@ -234,10 +234,20 @@ export default function App() {
     const arrivals = new Array(movementStarts.length).fill(0);
     arrivals[0] = 0;
 
+    // March3D's playback clock starts at the first playable movement, while
+    // OpenMarch files may contain one or more setup/sentinel beats before it.
+    // Normalize every page boundary to that first movement start. Without this
+    // normalization the opening Set 0 -> 1 move can visually reach its final
+    // count, then wait for the pre-roll offset before advancing.
+    const playbackOrigin = movementStarts[1] ?? 0;
+
     // The move from Set i-1 to Set i occupies the interval that starts on
     // page i and ends when page i+1 begins.
     for (let i = 1; i < movementStarts.length - 1; i++) {
-      arrivals[i] = Math.max(arrivals[i - 1], movementStarts[i + 1]);
+      arrivals[i] = Math.max(
+        arrivals[i - 1],
+        movementStarts[i + 1] - playbackOrigin,
+      );
     }
 
     // The final written page has no following page boundary, so OpenMarch
@@ -273,7 +283,7 @@ export default function App() {
 
     arrivals[last] = Math.max(
       arrivals[last - 1],
-      lastStart + finalMoveDuration,
+      lastStart - playbackOrigin + finalMoveDuration,
     );
 
     return arrivals;
