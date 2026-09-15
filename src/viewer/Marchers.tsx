@@ -85,6 +85,7 @@ type InstrumentKind =
   | "snare"
   | "tenors"
   | "bass"
+  | "cymbals"
   | "flag"
   | "rifle";
 
@@ -364,46 +365,73 @@ function instrumentGeometry(kind: InstrumentKind) {
     case "snare":
       return mergeParts([
         transformed(
-          new THREE.CylinderGeometry(0.48, 0.48, 0.36, 14),
-          new THREE.Matrix4(),
+          new THREE.CylinderGeometry(0.48, 0.48, 0.45, 14),
+          T(0, -0.2, -0.2),
         ),
         transformed(
           new THREE.TorusGeometry(0.49, 0.035, 6, 16),
-          M(T(0, 0.18, 0), RX(Math.PI / 2)),
+          M(T(0, 0.02, -0.2), RX(Math.PI / 2)),
         ),
         transformed(
           new THREE.TorusGeometry(0.49, 0.035, 6, 16),
-          M(T(0, -0.18, 0), RX(Math.PI / 2)),
+          M(T(0, -0.42, -0.2), RX(Math.PI / 2)),
         ),
       ]);
     case "tenors": {
       const parts: THREE.BufferGeometry[] = [];
       const drums = [
-        [-0.5, 0.04, 0.06, 0.3],
-        [-0.18, 0, 0, 0.36],
-        [0.18, 0, 0, 0.36],
-        [0.5, 0.04, 0.06, 0.3],
-        [0, -0.03, -0.28, 0.24],
+        [-1.02, -0.35, 0.00, 0.48],
+        [-0.37, -0.35, -0.62, 0.411],
+        [ 0.39, -0.35, -0.62, 0.343],
+        [ 0.92, -0.35, 0.00, 0.446],
+        [ 0.00, -0.35, -0.05, 0.24],
       ] as const;
       for (const [x, y, z, r] of drums)
         parts.push(
-          transformed(new THREE.CylinderGeometry(r, r, 0.3, 12), T(x, y, z)),
+          transformed(new THREE.CylinderGeometry(r, r, 0.45, 12), T(x, y, z)),
         );
       return mergeParts(parts);
     }
     case "bass":
       return mergeParts([
         transformed(
-          new THREE.CylinderGeometry(0.72, 0.72, 0.42, 16),
+          new THREE.CylinderGeometry(0.72, 0.72, 0.70, 16),
           RZ(Math.PI / 2),
         ),
         transformed(
           new THREE.TorusGeometry(0.72, 0.035, 6, 18),
-          M(T(0.22, 0, 0), new THREE.Matrix4().makeRotationY(Math.PI / 2)),
+          M(T(0.20, 0, 0), new THREE.Matrix4().makeRotationY(Math.PI / 2)),
         ),
         transformed(
           new THREE.TorusGeometry(0.72, 0.035, 6, 18),
-          M(T(-0.22, 0, 0), new THREE.Matrix4().makeRotationY(Math.PI / 2)),
+          M(T(-0.20, 0, 0), new THREE.Matrix4().makeRotationY(Math.PI / 2)),
+        ),
+        transformed(
+          new THREE.TorusGeometry(0.72, 0.035, 6, 18),
+          M(T(0.34, 0, 0), new THREE.Matrix4().makeRotationY(Math.PI / 2)),
+        ),
+        transformed(
+          new THREE.TorusGeometry(0.72, 0.035, 6, 18),
+          M(T(-0.34, 0, 0), new THREE.Matrix4().makeRotationY(Math.PI / 2)),
+        ),
+      ]);
+    case "cymbals":
+      return mergeParts([
+        transformed(
+          new THREE.CylinderGeometry(0.5, 0.62, 0.08, 24),
+          M(T(-0.34, 0, 0), RZ(Math.PI / 2)),
+        ),
+        transformed(
+          new THREE.CylinderGeometry(0.62, 0.5, 0.08, 24),
+          M(T(0.34, 0, 0), RZ(Math.PI / 2)),
+        ),
+        transformed(
+          new THREE.CylinderGeometry(0.12, 0.16, 0.14, 12),
+          M(T(-0.43, 0, 0), RZ(Math.PI / 2)),
+        ),
+        transformed(
+          new THREE.CylinderGeometry(0.12, 0.16, 0.14, 12),
+          M(T(0.43, 0, 0), RZ(Math.PI / 2)),
         ),
       ]);
     case "flag":
@@ -463,14 +491,15 @@ function instrumentForSection(
   if (/baritone|euphonium/.test(name)) return "baritone";
   if (/tuba|sousaphone/.test(name)) return "tuba";
   if (/(^|\b)(snare|snares)(\b|$)/.test(name)) return "snare";
-  if (/tenor|quad|quint/.test(name)) return "tenors";
+  if (/tenor|quad|quint|quints|sextet|sextets/.test(name)) return "tenors";
   if (/bass drum|bass drums/.test(name)) return "bass";
+  if (/cymbal|cymbals/.test(name)) return "cymbals";
   return "none";
 }
 
 function isBatterySection(section: string | null | undefined) {
   const name = (section ?? "").trim().toLowerCase();
-  return /(^|\b)(snare|snares|tenor|tenors|quad|quads|quint|quints|bass drum|bass drums|battery|drumline|drum line)(\b|$)/.test(
+  return /(^|\b)(snare|snares|tenor|tenors|quad|quads|quint|quints|sextet|sextets|bass drum|bass drums|cymbal|cymbals|battery|drumline|drum line)(\b|$)/.test(
     name,
   );
 }
@@ -534,6 +563,7 @@ export default function Marchers({
   const snareRef = useRef<THREE.InstancedMesh>(null);
   const tenorsRef = useRef<THREE.InstancedMesh>(null);
   const bassDrumRef = useRef<THREE.InstancedMesh>(null);
+  const cymbalsRef = useRef<THREE.InstancedMesh>(null);
   const flagRef = useRef<THREE.InstancedMesh>(null);
   const rifleRef = useRef<THREE.InstancedMesh>(null);
   const labelRefs = useRef(new Map<number, THREE.Group>());
@@ -642,6 +672,7 @@ export default function Marchers({
   const snareGeometry = useMemo(() => instrumentGeometry("snare"), []);
   const tenorsGeometry = useMemo(() => instrumentGeometry("tenors"), []);
   const bassGeometry = useMemo(() => instrumentGeometry("bass"), []);
+  const cymbalsGeometry = useMemo(() => instrumentGeometry("cymbals"), []);
   const flagGeometry = useMemo(() => instrumentGeometry("flag"), []);
   const rifleGeometry = useMemo(() => instrumentGeometry("rifle"), []);
   const bassScaleById = useMemo(() => {
@@ -718,6 +749,7 @@ export default function Marchers({
       snare: snareRef.current,
       tenors: tenorsRef.current,
       bass: bassDrumRef.current,
+      cymbals: cymbalsRef.current,
       flag: flagRef.current,
       rifle: rifleRef.current,
     };
@@ -1174,14 +1206,14 @@ export default function Marchers({
               ey = 2.3;
               ez = -0.18;
               hx = -0.3;
-              hy = 2.15;
+              hy = 1.9;
               hz = -0.88;
             } else {
               ex = 0.5;
               ey = 2.3;
               ez = -0.18;
               hx = 0.3;
-              hy = 2.15;
+              hy = 1.9;
               hz = -0.88;
             }
             break;
@@ -1192,14 +1224,14 @@ export default function Marchers({
               ey = 2.25;
               ez = -0.22;
               hx = -0.08;
-              hy = 2.3;
+              hy = 1.9;
               hz = -0.5;
             } else {
               ex = 0.38;
               ey = 1.95;
               ez = -0.2;
               hx = 0.08;
-              hy = 1.82;
+              hy = 1.9;
               hz = -0.5;
             }
             break;
@@ -1238,6 +1270,23 @@ export default function Marchers({
               hx = 0.5 * bassScale;
               hy = 2.14;
               hz = bassForwardZ + 0.06;
+            }
+            break;
+          case "cymbals":
+            if (left) {
+              ex = -0.55;
+              ey = 2.3;
+              ez = -0.18;
+              hx = -0.5;
+              hy = 2.0;
+              hz = -0.9;
+            } else {
+              ex = 0.55;
+              ey = 2.3;
+              ez = -0.18;
+              hx = 0.5;
+              hy = 2.0;
+              hz = -0.9;
             }
             break;
           default:
@@ -1339,6 +1388,10 @@ export default function Marchers({
           multiplyParts(result, root, t1, t2);
         } else if (instrument === "tenors") {
           t1.makeTranslation(0, 1.88, -0.78);
+          t2.identity();
+          multiplyParts(result, root, t1, t2);
+        } else if (instrument === "cymbals") {
+          t1.makeTranslation(0, 1.98, -0.98);
           t2.identity();
           multiplyParts(result, root, t1, t2);
         } else if (instrument === "flag") {
@@ -1632,6 +1685,20 @@ export default function Marchers({
           color="#e1e4e8"
           metalness={0.48}
           roughness={0.42}
+          side={THREE.DoubleSide}
+        />
+      </instancedMesh>
+      <instancedMesh
+        ref={cymbalsRef}
+        args={[undefined, undefined, count]}
+        castShadow={castMarcherShadows}
+        frustumCulled={false}
+      >
+        <primitive attach="geometry" object={cymbalsGeometry} />
+        <meshStandardMaterial
+          color="#e1e4e8"
+          metalness={0.70}
+          roughness={0.22}
           side={THREE.DoubleSide}
         />
       </instancedMesh>
