@@ -10,6 +10,7 @@ import Scene from "./viewer/Scene";
 import { parseDots, type Drill } from "./lib/dots";
 import logoUrl from "./assets/March3D-clear.png";
 import * as THREE from "three";
+import packageJson from "../package.json";
 
 function audioMime(path: string) {
   const ext = path.toLowerCase().split(".").pop();
@@ -836,7 +837,9 @@ export default function App() {
           <img src={logoUrl} alt="March3D" className="brand-logo" />
           <div>
             <strong>March3D</strong>
-            <span className="subtitle">OpenMarch 3D Viewer · v0.3.33</span>
+            <span className="subtitle">
+              OpenMarch 3D Viewer · v{packageJson.version}
+            </span>
           </div>
         </div>
         <button className="button" onClick={openDots}>
